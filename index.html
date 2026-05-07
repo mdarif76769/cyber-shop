@@ -1,64 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="style.css">
-    <script src="/socket.io/socket.io.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Shop Pro</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .product-card { border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; }
+        .product-card img { width: 100%; height: 120px; object-fit: cover; }
+        button { background: #28a745; color: white; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 5px; }
+        .billing { background: #eee; padding: 15px; margin-top: 20px; display: none; }
+    </style>
 </head>
 <body>
-    <audio id="boot" src="sound.mp3"></audio>
-    <div class="card">
-        <div id="loginBox">
-            <h2>SECURE NODE LOGIN</h2>
-            <input type="password" id="passInput" placeholder="Access key">
-            <button onclick="handleLogin()">ENTER</button>
+    <div class="container">
+        <h1>Welcome to Cyber Shop</h1>
+        <div id="shopView">
+            <div class="product-grid" id="productGrid"></div>
+            <hr>
+            <h3>Shopping Cart</h3>
+            <div id="cartItems">Cart is empty</div>
+            <p><strong>Total: ৳<span id="totalPrice">0</span></strong></p>
+            <button onclick="checkout()" style="background: #007bff;">Place Order & Generate Bill</button>
         </div>
 
-        <div id="panelBox" style="display:none;">
-            <h2>REMOTE CYBER LAB</h2>
-            <button onclick="send('SCAN')">NETWORK SCAN</button>
-            <button onclick="send('MONITOR')">TRAFFIC MONITOR</button>
-            <button onclick="send('TWIN')">EVIL-TWIN DEMO</button>
-            <button onclick="send('REPORT')">GENERATE REPORT</button>
-            <button class="danger" onclick="send('SHUT')">SHUTDOWN</button>
-            <div id="term" class="term">BOOTING SYSTEM...</div>
+        <div id="billView" class="billing">
+            <h2>Invoice / বিল</h2>
+            <p id="billDetails"></p>
+            <button onclick="location.reload()">Back to Shop</button>
         </div>
     </div>
 
     <script>
-        const socket = io();
-        const loginBox = document.getElementById('loginBox');
-        const panelBox = document.getElementById('panelBox');
-        const passInput = document.getElementById('passInput');
-        const term = document.getElementById('term');
-        const bootSound = document.getElementById('boot');
+        let cart = [];
+        let total = 0;
 
-        function handleLogin() {
-            fetch('/login', {
+        // প্রোডাক্ট লোড করা
+        fetch('/api/products').then(res => res.json()).then(data => {
+            const grid = document.getElementById('productGrid');
+            data.forEach(p => {
+                grid.innerHTML += `
+                    <div class="product-card">
+                        <img src="${p.img}">
+                        <h4>${p.name}</h4>
+                        <p>Price: ৳${p.price}</p>
+                        <button onclick="addToCart('${p.name}', ${p.price})">Add to Cart</button>
+                    </div>`;
+            });
+        });
+
+        function addToCart(name, price) {
+            cart.push(name);
+            total += price;
+            document.getElementById('cartItems').innerText = cart.join(", ");
+            document.getElementById('totalPrice').innerText = total;
+        }
+
+        function checkout() {
+            if(total === 0) return alert("Cart is empty!");
+            const name = prompt("Enter your Name for the bill:");
+            
+            fetch('/api/checkout', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ pass: passInput.value })
+                body: JSON.stringify({ name, total, cart })
             })
-            .then(r => r.json())
-            .then(d => {
-                if(d.ok) {
-                    loginBox.style.display = "none";
-                    panelBox.style.display = "block";
-                    bootSound.play().catch(e => console.log("Audio play failed"));
-                } else {
-                    alert("Access denied");
-                }
-            })
-            .catch(err => alert("Server connection error!"));
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('shopView').style.display = 'none';
+                document.getElementById('billView').style.display = 'block';
+                document.getElementById('billDetails').innerHTML = `
+                    Order ID: ${data.bill.orderId}<br>
+                    Customer: ${data.bill.customer}<br>
+                    Total Amount: ৳${data.bill.total}<br>
+                    Date: ${data.bill.date}<br>
+                    <p>Thank you for shopping!</p>
+                `;
+            });
         }
-
-        function send(c) {
-            socket.emit('cmd', c);
-        }
-
-        socket.on('status', t => {
-            term.innerHTML = "> " + t + "<br>" + term.innerHTML;
-        });
     </script>
 </body>
 </html>
