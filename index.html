@@ -3,113 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Daraz - Premium Shop</title>
+    <title>Personalized Cyber Shop</title>
     <style>
-        :root { --primary: #ff4a00; --dark: #121212; --card: #1e1e1e; --text: #ffffff; }
-        body { background: var(--dark); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; }
-        header { background: var(--primary); padding: 15px; text-align: center; font-size: 24px; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .container { max-width: 1000px; margin: 20px auto; padding: 10px; }
-        
-        /* Product Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: var(--card); border-radius: 12px; overflow: hidden; transition: transform 0.3s; border: 1px solid #333; }
-        .card:hover { transform: translateY(-5px); border-color: var(--primary); }
-        .card img { width: 100%; height: 180px; object-fit: cover; }
-        .info { padding: 15px; }
-        .price { color: var(--primary); font-size: 20px; font-weight: bold; margin: 10px 0; }
-        
-        /* Buttons */
-        button { background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:hover { opacity: 0.8; }
-        
-        /* Cart UI */
-        .cart-box { background: var(--card); padding: 20px; margin-top: 30px; border-radius: 12px; border: 1px dashed var(--primary); }
-        
-        /* Bill UI */
-        #billView { display: none; background: white; color: black; padding: 30px; border-radius: 12px; margin-top: 20px; }
-        .bill-header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        :root { --p: #f57224; --bg: #121212; --c: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; }
+        header { background: var(--p); padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 1000px; margin: auto; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .card { background: var(--c); border-radius: 10px; overflow: hidden; border: 1px solid #333; position: relative;}
+        .card img { width: 100%; height: 150px; object-fit: cover; }
+        .tag { position: absolute; top: 5px; right: 5px; background: var(--p); font-size: 10px; padding: 3px 7px; border-radius: 5px;}
+        .btn { background: var(--p); color: white; border: none; padding: 10px; width: 100%; cursor: pointer; border-radius: 5px;}
+        #loginOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:1000; display:flex; justify-content:center; align-items:center; }
     </style>
 </head>
 <body>
 
-<header>CYBER DARAZ</header>
-
-<div class="container">
-    <div id="shopView">
-        <div class="grid" id="productGrid"></div>
-        
-        <div class="cart-box">
-            <h3>🛒 Shopping Cart</h3>
-            <div id="cartItems">Empty</div>
-            <h2 style="color: var(--primary);">Total: ৳<span id="totalPrice">0</span></h2>
-            <button onclick="checkout()">PLACE ORDER NOW</button>
-        </div>
-    </div>
-
-    <div id="billView">
-        <div class="bill-header">
-            <h1>INVOICE</h1>
-            <p>Daraz Cyber-Station Ltd.</p>
-        </div>
-        <div id="billContent"></div>
-        <button style="margin-top:20px;" onclick="location.reload()">DOWNLOAD & BACK</button>
+<div id="loginOverlay">
+    <div style="text-align:center; background:var(--c); padding:40px; border-radius:15px; border:1px solid var(--p);">
+        <h2>Welcome to Cyber Shop</h2>
+        <input type="text" id="userIdInput" placeholder="Enter Your ID (e.g. Arif)" style="padding:10px; width:200px; border-radius:5px; border:none;"><br><br>
+        <button class="btn" onclick="login()">LOGIN TO SHOP</button>
     </div>
 </div>
 
+<header>
+    <span>SMART SHOP</span>
+    <span id="userDisplay"></span>
+</header>
+
+<div class="container">
+    <h3 id="recTitle" style="color:var(--p); display:none;">Recommended for You (আপনার জন্য বিশেষ)</h3>
+    <div class="grid" id="recGrid" style="margin-bottom:40px;"></div>
+
+    <h3>All Products</h3>
+    <div class="grid" id="allGrid"></div>
+</div>
+
 <script>
-    let cart = [];
-    let total = 0;
+    let currentUserId = "";
+    let userHistory = [];
 
-    // লোড প্রোডাক্টস
-    fetch('/api/products').then(r => r.json()).then(data => {
-        const grid = document.getElementById('productGrid');
-        data.forEach(p => {
-            grid.innerHTML += `
-                <div class="card">
-                    <img src="${p.img}">
-                    <div class="info">
-                        <h3>${p.name}</h3>
-                        <div class="price">৳${p.price}</div>
-                        <button onclick="addToCart('${p.name}', ${p.price})">Add to Cart</button>
-                    </div>
-                </div>`;
-        });
-    });
+    function login() {
+        currentUserId = document.getElementById('userIdInput').value;
+        if(!currentUserId) return alert("Enter ID");
 
-    function addToCart(name, price) {
-        cart.push(name);
-        total += price;
-        document.getElementById('cartItems').innerText = cart.join(" | ");
-        document.getElementById('totalPrice').innerText = total;
-    }
-
-    function checkout() {
-        if(total === 0) return alert("Add items to cart first!");
-        const name = prompt("Enter Your Name:");
-        const address = prompt("Enter Shipping Address:");
-
-        fetch('/api/checkout', {
+        fetch('/api/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name, address, total })
+            body: JSON.stringify({ userId: currentUserId })
         })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('shopView').style.display = 'none';
-            const bill = document.getElementById('billView');
-            bill.style.display = 'block';
-            document.getElementById('billContent').innerHTML = `
-                <p><strong>Order ID:</strong> ${data.bill.orderId}</p>
-                <p><strong>Customer:</strong> ${data.bill.customer}</p>
-                <p><strong>Address:</strong> ${data.bill.address}</p>
-                <hr>
-                <h3>Total Amount: ৳${data.bill.total}</h3>
-                <p><strong>Status:</strong> ${data.bill.status}</p>
-                <p>Date: ${data.bill.date}</p>
-            `;
+        .then(r => r.json()).then(data => {
+            userHistory = data.history;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('userDisplay').innerText = "Hello, " + currentUserId;
+            loadProducts();
+        });
+    }
+
+    function loadProducts() {
+        fetch('/api/products').then(r => r.json()).then(products => {
+            const allGrid = document.getElementById('allGrid');
+            const recGrid = document.getElementById('recGrid');
+            allGrid.innerHTML = ""; recGrid.innerHTML = "";
+
+            // সবচেয়ে বেশি ক্লিক করা ক্যাটাগরি বের করা (পর্যালোচনা)
+            let mostFrequentCat = userHistory.sort((a,b) =>
+                userHistory.filter(v => v===a).length - userHistory.filter(v => v===b).length
+            ).pop();
+
+            products.forEach(p => {
+                const html = `
+                    <div class="card">
+                        ${p.category === mostFrequentCat ? '<span class="tag">For You</span>' : ''}
+                        <img src="${p.img}">
+                        <div style="padding:10px;">
+                            <h4>${p.name}</h4>
+                            <p style="color:var(--p)">৳${p.price}</p>
+                            <button class="btn" onclick="trackAndBuy('${p.category}', ${p.price})">BUY NOW</button>
+                        </div>
+                    </div>`;
+                
+                if (p.category === mostFrequentCat) {
+                    recGrid.innerHTML += html;
+                    document.getElementById('recTitle').style.display = 'block';
+                }
+                allGrid.innerHTML += html;
+            });
+        });
+    }
+
+    function trackAndBuy(category, price) {
+        // ক্লিক ট্র্যাক করা (সার্ভারে পাঠানো)
+        fetch('/api/track-click', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ userId: currentUserId, category: category })
+        }).then(() => {
+            alert("Redirecting to Payment Gateway for ৳" + price);
+            location.reload(); // রিলোড করলে ডাটা আপডেট হবে এবং রেকমেন্ডেশন চেঞ্জ হবে
         });
     }
 </script>
-
 </body>
 </html>
