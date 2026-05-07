@@ -1,1 +1,64 @@
-<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="style.css"><script src="/socket.io/socket.io.js"></script></head><body><audio id="boot" src="sound.mp3"></audio><div class="card"><div id="login"><h2>SECURE NODE LOGIN</h2><input type="password" id="pass" placeholder="Access key"><button onclick="login()">ENTER</button></div><div id="panel"><h2>REMOTE CYBER LAB</h2><button onclick="send('SCAN')">NETWORK SCAN</button><button onclick="send('MONITOR')">TRAFFIC MONITOR</button><button onclick="send('TWIN')">EVIL-TWIN DEMO</button><button onclick="send('REPORT')">GENERATE REPORT</button><button class="danger" onclick="send('SHUT')">SHUTDOWN</button><div id="term" class="term">BOOTING SYSTEM...</div></div></div><script>const socket=io();function login(){fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass:pass.value})}).then(r=>r.json()).then(d=>{if(d.ok){login.style.display="none";panel.style.display="block";boot.play();}else alert("Access denied");});}function send(c){socket.emit('cmd',c);}socket.on('status',t=>{term.innerHTML="> "+t+"<br>"+term.innerHTML;});</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <audio id="boot" src="sound.mp3"></audio>
+    <div class="card">
+        <div id="loginBox">
+            <h2>SECURE NODE LOGIN</h2>
+            <input type="password" id="passInput" placeholder="Access key">
+            <button onclick="handleLogin()">ENTER</button>
+        </div>
+
+        <div id="panelBox" style="display:none;">
+            <h2>REMOTE CYBER LAB</h2>
+            <button onclick="send('SCAN')">NETWORK SCAN</button>
+            <button onclick="send('MONITOR')">TRAFFIC MONITOR</button>
+            <button onclick="send('TWIN')">EVIL-TWIN DEMO</button>
+            <button onclick="send('REPORT')">GENERATE REPORT</button>
+            <button class="danger" onclick="send('SHUT')">SHUTDOWN</button>
+            <div id="term" class="term">BOOTING SYSTEM...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const loginBox = document.getElementById('loginBox');
+        const panelBox = document.getElementById('panelBox');
+        const passInput = document.getElementById('passInput');
+        const term = document.getElementById('term');
+        const bootSound = document.getElementById('boot');
+
+        function handleLogin() {
+            fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ pass: passInput.value })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if(d.ok) {
+                    loginBox.style.display = "none";
+                    panelBox.style.display = "block";
+                    bootSound.play().catch(e => console.log("Audio play failed"));
+                } else {
+                    alert("Access denied");
+                }
+            })
+            .catch(err => alert("Server connection error!"));
+        }
+
+        function send(c) {
+            socket.emit('cmd', c);
+        }
+
+        socket.on('status', t => {
+            term.innerHTML = "> " + t + "<br>" + term.innerHTML;
+        });
+    </script>
+</body>
+</html>
